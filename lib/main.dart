@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
+import 'dart:core';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +12,8 @@ import 'package:picovoice/picovoice_error.dart';
 import 'jarvis_widget.dart';
 import 'mic_widget.dart';
 import 'package:volume_control/volume_control.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'dart:developer' as dev;
 
 void main() {
   runApp(MyApp());
@@ -39,6 +44,8 @@ class SpeechScreen extends StatefulWidget {
 class _SpeechScreenState extends State<SpeechScreen> {
   late PicovoiceManager _picovoiceManager;
   late double vol;
+  final FlutterTts flutterTts = FlutterTts();
+  final Random random = new Random();
 
   int team1Score = 0;
   int team2Score = 0;
@@ -49,10 +56,25 @@ class _SpeechScreenState extends State<SpeechScreen> {
   void initState() {
     super.initState();
     loadVolume();
+    speechInit();
   }
 
   void loadVolume() async {
     vol = await VolumeControl.volume;
+  }
+  void speechInit() async{
+    // await flutterTts.setLanguage("en-GB");
+    // List<Object?> voices = await flutterTts.getVoices;
+    await flutterTts.setVoice({"name": "en-gb-x-rjs-network", "locale": "en-GB"});
+    // await flutterTts.setVoice(voices.singleWhere((element) => element["name"] == "en-gb-x-rjs#male_1"));
+    await flutterTts.setPitch(0.8);
+    await flutterTts.setSpeechRate(1.0);
+    // List<String> voiceStrings = voices.map((e) => e.toString()).toList();
+    // dev.log(voiceStrings.where((element) => element.contains('en-GB')).toList().toString());
+  }
+
+  Future<void> speak(String text) async {
+    await flutterTts.speak(text);
   }
 
   @override
@@ -60,12 +82,13 @@ class _SpeechScreenState extends State<SpeechScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Center(
-          child: Text("Say \"Scoreboard\""),
+          child: Text("Say \"Jarvis\""),
         ),
         actions: [
           IconButton(
             icon: Icon(!jarvisListening ? Icons.mic : Icons.mic_off),
             onPressed: (){
+              speechInit();
               if(!jarvisListening) _initPicoVoice();
               else _turnOffCommand();
             },
@@ -198,6 +221,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
       setState(() {
         jarvisListening = true;
       });
+      speak("Welcome back sir.");
     } on PvError catch(ex){
       print(ex);
     }
@@ -210,6 +234,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     });
     vol = await VolumeControl.volume;
     if(vol > .1) VolumeControl.setVolume(0.1);
+    await Future.delayed(Duration(milliseconds: 200), (){});
   }
 
   void _inferenceCallback(Map<String, dynamic> inference){
@@ -225,6 +250,8 @@ class _SpeechScreenState extends State<SpeechScreen> {
         _chooseTeamCommand();
       } else if(intentName == 'turnOff'){
         _turnOffCommand();
+      } else if(intentName == 'readScores'){
+        _readScoreCommand();
       }
     } else {
       _rejectCommand();
@@ -252,28 +279,39 @@ class _SpeechScreenState extends State<SpeechScreen> {
   void _changeScoreCommand(bool add, Map<String, String> slots){
     int teamNum = int.parse(slots['teamNum']!);
     if(teamNum == 1 || teamNum == 2){
+      int points = int.parse(slots['pointAmt']!);
+      String text = "$points point" + (points.abs() == 1 ? " " : "s ");
       if(add){
-        _addPoints(teamNum - 1, int.parse(slots['pointAmt']!));
+        _addPoints(teamNum - 1, points);
+        text += "added to ";
       } else {
-        _subtractPoints(teamNum - 1, int.parse(slots['pointAmt']!));
+        _subtractPoints(teamNum - 1, points);
+        text += "taken from ";
       }
+      speak(text + " team $teamNum");
     }
   }
 
-  void _chooseTeamCommand(){
-    print("Random team Chosen");
+  void _chooseTeamCommand() async {
+    await Future.delayed(Duration(milliseconds: 500));
+    int teamNum = 1 + random.nextInt(2);
+    await speak("Team $teamNum has been chosen");
   }
 
   void _turnOffCommand(){
-    // print("Unable to turn off");
+    speak("Shutting systems down");
     _picovoiceManager.stop();
     setState(() {
       jarvisListening = false;
     });
   }
 
-  void _rejectCommand(){
-    print("Jarvis couldn't understand what was said");
+  void _readScoreCommand(){
+    speak("Team 1 has $team1Score points. Team 2 has $team2Score points.");
+  }
+
+  void _rejectCommand() async {
+    await speak("What did you say sir?");
   }
 
 }
