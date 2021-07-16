@@ -18,8 +18,8 @@ class _MicWidgetState extends State<MicWidget>
   void initState() {
     super.initState();
     showController =
-        AnimationController(vsync: this, duration: Duration(milliseconds: 400));
-    repeatController = AnimationController(vsync: this, duration: Duration(seconds: 2));
+        AnimationController(vsync: this, duration: Duration(milliseconds: 200));
+    repeatController = AnimationController(vsync: this, duration: Duration(milliseconds: 1500));
   }
 
   @override
@@ -47,7 +47,7 @@ class _MicWidgetState extends State<MicWidget>
         begin: 0.0,
         end: 1.0,
       ).animate(
-        CurvedAnimation(parent: showController, curve: Curves.elasticOut),
+        CurvedAnimation(parent: showController, curve: Curves.easeInOut),
       )..addStatusListener((status) {
         if(status == AnimationStatus.completed){
           repeatController.forward();

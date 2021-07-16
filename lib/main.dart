@@ -116,8 +116,8 @@ class _SpeechScreenState extends State<SpeechScreen> {
           ),
           IgnorePointer(
             child: Align(
-              alignment: Alignment.bottomCenter,
-              child: JarvisWidget(show: jarvisListening),
+              alignment: Alignment.center,
+              child: JarvisWidget(show: jarvisListening, mic: micExpanded),
             ),
           ),
         ],
@@ -252,6 +252,8 @@ class _SpeechScreenState extends State<SpeechScreen> {
         _turnOffCommand();
       } else if(intentName == 'readScores'){
         _readScoreCommand();
+      } else if(intentName == 'resetScore'){
+        _resetScoreCommand();
       }
     } else {
       _rejectCommand();
@@ -279,7 +281,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   void _changeScoreCommand(bool add, Map<String, String> slots){
     int teamNum = int.parse(slots['teamNum']!);
     if(teamNum == 1 || teamNum == 2){
-      int points = int.parse(slots['pointAmt']!);
+      int points = int.parse(slots['pointAmt'] ?? '1');
       String text = "$points point" + (points.abs() == 1 ? " " : "s ");
       if(add){
         _addPoints(teamNum - 1, points);
@@ -308,6 +310,14 @@ class _SpeechScreenState extends State<SpeechScreen> {
 
   void _readScoreCommand(){
     speak("Team 1 has $team1Score points. Team 2 has $team2Score points.");
+  }
+
+  void _resetScoreCommand(){
+    speak("Scores have been reset.");
+    setState(() {
+      team1Score = 0;
+      team2Score = 0;
+    });
   }
 
   void _rejectCommand() async {
